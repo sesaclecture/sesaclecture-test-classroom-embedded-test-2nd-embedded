@@ -1,0 +1,7 @@
+services:
+  web:
+    image: nginx:alpine
+    container_name: msa-compose-nginx
+    ports:
+      - "18081:80"
+
