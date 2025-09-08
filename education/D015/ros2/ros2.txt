@@ -1,0 +1,134 @@
+# UTF-8 로케일 확인/설정
+locale
+sudo apt update && sudo apt install -y locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# Universe 켜고 ROS APT 소스 등록
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y universe
+
+# 로스 저장소 등록(공식 패키지: ros2-apt-source)
+sudo apt update && sudo apt install -y curl
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F tag_name | awk -F\" '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb \
+"https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+
+
+# ROS 2 Jazzy 설치
+sudo apt update && sudo apt upgrade -y
+# 데스크톱(추천)
+sudo apt install -y ros-jazzy-desktop
+# 개발 도구
+sudo apt install -y ros-dev-tools
+
+
+
+# 현재 터미널 세션
+source /opt/ros/jazzy/setup.bash
+
+# 매번 자동 적용(권장)
+echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
+
+
+# 도메인 ID(본인 고유 번호로)
+echo 'export ROS_DOMAIN_ID=42' >> ~/.bashrc
+
+# CycloneDDS 사용(발견 안정적)
+sudo apt install -y ros-jazzy-rmw-cyclonedds-cpp
+echo 'export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp' >> ~/.bashrc
+
+
+
+# 터미널 1
+ros2 run demo_nodes_cpp talker
+# 터미널 2
+ros2 run demo_nodes_py listener
+
+
+# 터미널 1
+ros2 run turtlesim turtlesim_node
+# 터미널 2
+ros2 run turtlesim turtle_teleop_key
+
+
+# 그래프 점검
+ros2 node list
+ros2 topic list
+ros2 topic info /turtle1/cmd_vel --verbose
+
+# 2초간 전진
+ros2 topic pub /turtle1/cmd_vel geometry_msgs/Twist \
+"{linear: {x: 2.0}, angular: {z: 0.0}}"
+
+
+# 필수 툴(없으면 설치)
+sudo apt install -y python3-colcon-common-extensions
+
+# 워크스페이스
+mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
+ros2 pkg create my_pkg --build-type ament_python \
+  --license MIT \
+  --maintainer-name "kcci" \
+  --maintainer-email "none@example.com"
+  --dependencies rclpy std_msgs \
+  --description "My first ROS2 package"
+colcon list --paths my_pkg/ -v
+my_pkg	/home/kcci/ros2_ws/my_pkg	(ros.ament_python)
+
+
+cd ~/ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+
+# 두 터미널에서 각각
+ros2 run my_pkg talker
+ros2 run my_pkg listener
+
+
+#############################################################################
+
+pi5 에서..
+
+# 편의 스크립트(공식)로 설치
+curl -fsSL https://get.docker.com | sh
+
+# 현재 유저를 docker 그룹에 추가(로그아웃/로그인 필요)
+sudo usermod -aG docker $USER
+
+reboot!
+
+docker version
+docker run --rm hello-world
+docker compose version
+
+# 1) X 접근 허용 (호스트 파이에서 1회)
+xhost +local:root
+
+# 2) 이미지 받고 컨테이너 실행
+docker pull arm64v8/ros:humble
+
+docker run -it --rm --name humble-gui \
+  --network=host \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  -e ROS_DOMAIN_ID=42 \
+  -e RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+  arm64v8/ros:humble bash
+
+apt update
+apt install -y ros-humble-turtlesim ros-humble-rmw-cyclonedds-cpp \
+               python3-colcon-common-extensions
+
+source /opt/ros/humble/setup.bash
+ros2 run turtlesim turtlesim_node
+# 새 탭(컨테이너 안에서)
+ros2 run turtlesim turtle_teleop_key
+
+
+mkdir ~/ros2_ws/
+
+-v로 마운트 하는 방식 or docker commit!

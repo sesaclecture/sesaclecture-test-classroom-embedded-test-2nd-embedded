@@ -1,0 +1,14 @@
+sudo apt-get install build-essential gcc-aarch64-linux-gnu \
+    bc git wget libssl-dev make libc6-dev libncurses5-dev \
+    bison flex libgnutls28-dev
+
+git clone https://github.com/u-boot/u-boot.git
+cd u-boot
+make distclean
+make rpi_arm64_defconfig
+make -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu-
+
+-----
+
+cd configs
+ll * | grep rpi
